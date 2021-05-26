@@ -1,0 +1,1059 @@
+import React, { useState } from 'react';
+import { Link, Redirect ,useParams} from 'react-router-dom';
+import homeImg from '../../../Static/Images/Home/order.jpg';
+
+// Default Preview Image
+import preview_img from '../../../Static/Images/Preview/preview.png'
+
+// Finished ... 
+
+export const OrderTrip = () => {
+  const [state, setState] = useState({
+    companies: [], 
+    passengers: {data: [], num: 1}, 
+    type: null
+  }); // Set State to Sent Data To API
+
+  const [error, setError] = useState({}); // Set Errors in Forms
+  const [day, setDay] = useState(); // Set Day By Date
+  const [complete, setComplete] = useState({completed: false, order: null});
+  const { tid } = useParams();
+  // For Image Upload
+  const [upBtn, setUpBtn] = useState('btn')
+  const weekdays = [
+    {name: 'الأحد', value: 'Sunday'},
+    {name: 'الإثنين', value: 'Monday'},
+    {name: 'الثلاثاء', value: 'Tuesday'},
+    {name: 'الأربعاء', value: 'Wednesday'},
+    {name: 'الخميس', value: 'Thursday'},
+    {name: 'الجمعة', value: 'Friday'},
+    {name: 'السبت', value: 'Saturday'},
+  ]
+  
+  const SAcities = [
+    'جدة',
+    'مكة',
+    'الرياض',
+    'الدمام',
+    'الطوال',
+    'جيزان',
+    'شرورة',
+    'وادي الدواسر'
+  ]
+  
+  const YEcities = [
+    "صنعاء",
+    "عدن",
+    "تعز",
+    "الحديدة",
+    "مارب",
+    "ذمار",
+    "اب",
+    "المكلا",
+    "عفار",
+    "البيضاء",
+    "رداع",
+    "الجراجي",
+    "زبيد",
+    "عتق",
+    "الغيظة",
+    "سيئون",
+    "باجل",
+    "حجة",
+    "صعدة",
+    "شبوة",
+    "الضحي",
+    "لحج"
+  ]
+
+  const Companies = [
+    "يمن باص",
+    "البركة",
+    "النور",
+    "اعتماد",
+    "الأفضل",
+    "أبو سرهد",
+    "النورس",
+    "راحة",
+    "السراج",
+    "البراق",
+    "بن معمر",
+    "النصر",
+    "المتحدة",
+    "النقل الجماعي",
+    "العربي",
+    "العربية",
+    "الأولى",
+    "المسافر العربي",
+    "الإمبرطور",
+    "آسيا"
+  ]
+
+  const YECompanies = [
+    'يمن باص',
+    'الاولى',
+    'راحة',
+    'النور',
+    'البراق',
+    'النقل الجماعي'
+  ]
+
+
+  const handleType = (e) => {
+    // Reset Forms
+		const Form = document.TripForm;
+    Form && Form.reset();
+    let image_form = document.getElementById('image_preview')
+    if (image_form){
+      image_form.src = preview_img
+    }
+    // Reset State & set Type, and Errors
+    
+		setState({companies: [], passengers: {data: [], num: 1}, type: e.target.value});
+    setError({});
+     console.log(state.tid)   
+  }
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+
+    const Order = async() => {
+      await fetch('/api/trips/order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({...state, hostname: window.location.origin})
+      }).then(resp => {
+        resp.json().then(data =>{
+          if (resp.ok) {
+            setComplete({completed: true, order: data.oid})
+          } else {
+            document.getElementById("SubmissionBtn").disabled = false;
+            document.getElementById('waitingText').classList.add('d-none')
+            setError({
+              Submit: {
+                name: 'خطأ',
+                error: 'حدث خطأ أثناء معالجة الطلب, الرجاء المحاولة من جديد لاحقاً!'
+              }
+            })
+          }
+        })
+      })
+    }
+
+    // Values To Validate Tickets
+    let elders = parseInt(state['num_elders']) || 0
+    let kids = parseInt(state['num_kids']) || 0
+    let babies = parseInt(state['num_babies']) || 0
+    let tickets = parseInt(state['num_tickets']) || 0
+
+
+    if ((!state['phone_sa'] && !state['phone_ye'])) {
+      setError({
+        ...error,
+        phone: {
+          name: 'أرقام الهاتف',
+          error: 'يجب أن تقوم بإضافة رقم هاتف واحد على الأقل'
+        }
+      });
+    } else if ((state['phone_sa'] && state['phone_sa'].length < 10) || (state['phone_ye'] && state['phone_ye'].length < 9)) {
+      setError({
+        ...error,
+        phone: {
+          name: 'أرقام الهاتف',
+          error: 'يجب أن يكون طول رقم الهاتف السعودي 10 والهاتف اليمني 9'
+        }
+      });
+    } else if (!state['companies'] || (state['companies'] && state['companies'].length === 0)) {
+      setError({
+        ...error,
+        companies: {
+          name: 'شركات النقل',
+          error: 'الرجاء تحديد شركة نقل واحدة على الأقل'
+        }
+      })
+    } else if (!(tickets === (elders+kids+babies)) ) {
+      setError({
+        ...error,
+        tickets: {
+          name: 'عدد التذاكر',
+          error: 'عدد التذاكر لا يتوافق مع عدد الرضع, الأطفال, وكبار السن, الرجاء التأكد من العدد'
+        }
+      })
+
+    } else if (!state['date'] || state.date === '') {
+      setError({
+        ...error,
+        date: {
+          name: 'التاريخ',
+          error: 'الرجاء إدخال تاريخ الرحلة, ويجب أن يكون خلال 7 أيام من تاريخ اليوم.'
+        }
+      })
+
+    } else if (!state['name'] || state.name === '') {
+      setError({
+        name: {
+          name: 'إسم المسافر',
+          error: 'يجب عليك إدخال إسم المسافر الرئيسي أولاً.'
+        }
+      })
+    } else {
+      // Re-set Error
+      setError({})
+
+      // Sending Order To Backend, Disabling the submission button in case of delay
+      document.getElementById("SubmissionBtn").disabled = true;
+      document.getElementById('waitingText').classList.remove('d-none')
+      Order();
+    
+    }
+  }
+
+  const handleChange = (e) => {
+    // Not Preventing Default when Using Checkbox
+    if (e.target.name !== 'companies[]'){
+      e.preventDefault();
+    }
+
+    if (e.target.id === 'phone_sa' || e.target.id === 'phone_ye') {
+      // Remove No-existing Phone Number Error
+      let errors = error;
+      delete errors['phone'];
+      setError(errors);
+
+
+
+      let phone = e.target.value
+      const re = /\D/g;
+      phone = phone.replace(re, '');
+      // Validate SaudiArabia & Yemen Phone Number
+      if (e.target.id === 'phone_sa') {
+        let maxLength = 10;
+        // Check First two (must match 05)
+        if (phone.length >= 2 && (phone[0] === '0' && phone[1] === '5')) {
+          
+          if ((phone.length < maxLength)){
+            setError({
+              ...error,
+              [e.target.id]: {
+                error: 'يجب أن يحتوي رقم الهاتف السعودي على 10 أرقام',
+                name: 'رقم الهاتف السعودي',
+                type: 'warning'
+              }
+            })
+
+          } else {
+            // Delete PhoneSA errors
+            let errors = error
+            delete errors[e.target.id]
+            setError(errors)
+          }
+        
+        } else if (phone.length >= 2 && (phone[0] !== '0' || phone[1] !== '5')) {
+          setError({
+            ...error,
+            [e.target.id]: {
+              error: 'يجب أن يبدأ رقم الهاتف السعودي بـ 05',
+              name: 'رقم الهاتف السعودي'
+            }
+          })
+        
+        } else {
+          let errors = error
+          delete errors[e.target.id]
+          setError(errors)
+        }
+        // Check Length
+        if (phone.length > maxLength) {
+          phone = phone.slice(0, (maxLength-1))
+        }
+      } else {
+        let maxLength = 9;
+        // Check First (must match 7)
+        if (phone.length >= 1 && phone[0] === '7') {
+          if ((phone.length < maxLength)){
+            setError({
+              ...error,
+              [e.target.id]: {
+                error: 'يجب أن يحتوي رقم الهاتف اليمني على 9 أرقام',
+                name: 'رقم الهاتف اليمني',
+                type: 'warning'
+              }
+            })
+
+          } else {
+            // Delete PhoneSA errors
+            let errors = error
+            delete errors[e.target.id]
+            setError(errors)
+          }
+
+        } else if (phone.length >= 1 && phone[0] !== '7') {
+          setError({
+            ...error,
+            [e.target.id]: {
+              error: 'يجب أن يبدأ رقم الهاتف اليمني بـ 7',
+              name: 'رقم الهاتف اليمني'
+            }
+          })
+          
+        } else {
+          let errors = error
+          delete errors[e.target.id]
+          setError(errors)
+        }
+        // Check Length
+        if (phone.length > maxLength) {
+          phone = phone.slice(0, (maxLength-1))
+        }
+      }
+      e.target.value = phone;
+      // Set Phone Number
+      setState({
+        ...state,tid:tid,
+        [e.target.id]: e.target.value
+      })
+    } else if (e.target.id === 'date') {
+      var date = new Date(e.target.value);
+      var index = date.getDay();
+      var value = weekdays[index] && weekdays[index].name;
+      setDay(value);
+      setState({...state, [e.target.id]: e.target.value, day: value});
+
+    } else if (e.target.name === 'companies[]') {
+      let id = e.target.id;
+      // If User is checking a box
+      if (document.getElementById(id).checked) {
+        var limit = 4;
+        if (state.companies.length < limit) {
+          setState({...state, companies: [...state.companies, e.target.value]})
+        } else {
+          document.getElementById(id).checked = false;
+        }
+        // Delete Companies Errors
+        let errors = error;
+        delete errors['companies']
+        setError(errors)
+      }
+      // If User is unChecking a box
+      else {
+        var companies = state.companies;
+        const index = companies.indexOf(e.target.value);
+        if (index > -1){
+          companies.splice(index, 1)
+        }
+        setState({...state, companies: companies})
+      }
+    } else if (e.target.id === 'num_tickets' || e.target.id === "num_elders" || e.target.id === "num_kids" || e.target.id === "num_babies") {
+      let errors = error;
+      delete errors['tickets'];
+      setError(errors);
+
+      setState({
+        ...state,
+        [e.target.id]: e.target.value
+      })
+
+    } else if (e.target.id === 'date') {
+      let errors = error;
+      delete errors['date'];
+      setError(errors);
+
+      setState({
+        ...state,
+        [e.target.id]: e.target.value
+      })
+
+    } else {
+      setState({
+        ...state,
+        [e.target.id]: e.target.value
+      })
+    }
+  }
+
+  const handlePassengerChange = (e) => {
+    e.preventDefault();
+
+    // Get keys => Namespace & ID
+    var keys = e.target.id.split('-')
+    let namespace = keys[0]
+    let id = keys[1]
+
+    //  Keeping The State & Adding Info
+    let CurState = {...state}
+    let CurPasInfo = [...CurState.passengers.data]
+
+    let TargetPass = {...CurPasInfo[id], [namespace]: e.target.value}
+
+    CurPasInfo[id] = TargetPass
+
+    setState({
+      ...state,
+      passengers: {
+        ...state.passengers,
+        data: CurPasInfo
+      }
+    });
+  }
+
+  const addPassenger = (e) => {
+    e.preventDefault();
+
+    setState({
+      ...state,
+      passengers: {
+        ...state.passengers,
+        num: state.passengers.num + 1
+      }
+    })
+  }
+
+  const removePassenger = (e) => {
+    e.preventDefault();
+    // Get To Remove Passenger ID
+    const id = state.passengers.num - 1;
+
+    // Remove Passenger with ID
+    const passengers = state.passengers.data;
+    passengers.splice(id, 1)
+
+    setState({
+      ...state,
+      passengers: {
+        data: passengers,
+        num: state.passengers.num - 1
+      }
+    })
+
+  }
+
+  const TripForm = () => {
+
+    const getCurrentDate = (date) => {
+
+      var dd = String(date.getDate());
+      var mm = String(date.getMonth() + 1);
+      var yy = date.getFullYear();
+  
+      return [yy,
+        (mm>9 ? '' : '0') + mm,
+        (dd>9 ? '' : '0') + dd].join('-');
+    }
+  
+    const getWeekDate = (date) => {
+  
+      var dd = date.getDate() + 7;
+      var mm = date.getMonth() + 1;
+      var yy = date.getFullYear();
+  
+      return [yy,
+        (mm>9 ? '' : '0') + mm,
+        (dd>9 ? '' : '0') + dd].join('-');
+      
+    }
+
+    const CustomerInfo = (
+      <div>
+        
+        <div className="form-inline mt-4">
+          <label htmlFor="name" className="ml-sm-4"/>
+          <div className="input-group">
+            <input required type="text" id="name" value={state.name ? state.name : ''} onChange={handleChange} placeholder="* إسم المسافر (واحد)" className={'form-control ml-sm-4 ' + (error['name'] ? 'is-invalid': '')}/>
+          </div>
+        </div>
+
+        <div className="form-inline mt-4">
+          <label htmlFor="phone_sa" className="ml-sm-4"/>
+          <div className="input-group">
+            <input onChange={handleChange} type="number" value={state.phone_sa ? state.phone_sa : ''} id="phone_sa" placeholder="رقم الجوال السعودي" className={'form-control num-input ' + (error['phone_sa'] || error['phone'] ? 'is-invalid': '')}/>
+            <div className="input-group-append">
+              <div className="input-group-text">966+</div>
+            </div>
+          </div>
+          
+
+          <label htmlFor="phone_ye" className="ml-sm-4"/>
+          <div className="input-group pt-special">
+            <input onChange={handleChange} type="number" value={state.phone_ye ? state.phone_ye : ''} id="phone_ye" placeholder="رقم الجوال اليمني" className={'form-control num-input ' + (error['phone_ye'] || error['phone'] ? 'is-invalid': '')}/>
+            <div className="input-group-append">
+              <div className="input-group-text">967+</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="form-inline mt-4">
+          <label htmlFor="email" className="ml-sm-4"/>
+            <div className="input-group">
+              <input onChange={handleChange} type="email" value={state.email ? state.email : ''} id="email" placeholder="البريد الإلكتروني" className="form-control"/>
+            </div>
+        </div>
+
+      </div>
+    )
+
+    const PassengersInfo = (
+      <div className="form-inline">
+        {[...Array(parseInt(state.passengers.num))].map((_, index) => (
+          <div key={index} className="form-inline mt-4">
+            <div className="container text-right mr-md-4">
+              <p className="font-weight-bold">* بيانات الراكب {index+1} : </p>
+            </div>
+            
+            <label htmlFor={`name-${index}`} className="ml-sm-4"/>
+            <div className="input-group">
+              <input onChange={handlePassengerChange} id={`name-${index}`} type="text" placeholder={`إسم الراكب ${index+1}`} className={"form-control " + (error[`name-${index}`] ? 'is-invaild' : '')}/>
+            </div>
+
+            <label htmlFor={`age-${index}`} className="ml-sm-4"/>
+            <div className="input-group pt-special">
+              <select required onChange={handlePassengerChange} id={`age-${index}`} className={"custom-select font-weight-bold " + (error[`age-${index}`] ? 'is-invalid' : '')}>
+                <option value="" defaultValue>* الفئه العمرية للراكب {index+1}</option>
+                <option value="بالغ" className="">بالغ</option>
+                <option value="طفل" className="">طفل (بين السنتين و 12 سنة)</option>
+                <option value="رضيع" className="">رضيع (تحت السنتين)</option>
+              </select>
+            </div>
+
+            <label htmlFor={`gender-${index}`} className="ml-sm-4"/>
+            <div className="input-group pt-special">
+              <select onChange={handlePassengerChange} id={`gender-${index}`} className="custom-select font-weight-bold">
+                <option value="" defaultValue>جنس الراكب {index+1}</option>
+                <option value="ذكر" className="">ذكر</option>
+                <option value="أنثى" className="">أنثى</option>
+              </select>
+            </div>
+
+            <label htmlFor={`documentID-${index}`} className="ml-sm-4"/>
+            <div className="input-group pt-special">
+              <input onChange={handlePassengerChange} id={`documentID-${index}`} type="text" placeholder={`رقم هوية الراكب ${index+1}`} className="form-control"/>
+            </div>
+
+          </div>
+        ))}
+        <div className="input-group mt-2">
+          <button onClick={addPassenger} className="btn btn-md btn-outline-dark mr-md-4">إضافة راكب</button>
+          {
+            state.passengers.num > 1 ? (
+                <button onClick={removePassenger} className="btn btn-md btn-outline-danger mr-md-4">حذف راكب</button>
+            ) : null
+          }
+        </div>
+      </div>  
+    )
+
+    const current_date = new Date();
+
+    const currentDate = getCurrentDate(current_date)
+    const weekLater = getWeekDate(current_date);
+
+    const YESA = (
+      <div>
+
+        {CustomerInfo}
+
+        <div className="form-inline mt-4">
+          <label htmlFor="from" className="ml-sm-4"/>
+          <div className="input-group">
+            <select required onChange={handleChange} id="from" className={"custom-select " + (error['from'] ? 'is-invalid': '')}>
+              <option value="" defaultValue>* مدينة الصعود (اليمن)</option>
+              {YEcities ? (YEcities.map((city, index) => {
+                return(<option value={city} key={index}>{city}</option>)
+              })) : null}
+            </select>
+          </div>
+
+          <label htmlFor="to" className="ml-sm-4"/>
+          <div className="input-group pt-special">
+            <select required onChange={handleChange} id="to" className={"custom-select " + (error['to'] ? 'is-invalid': '')}>
+              <option value="" defaultValue>* مدينة النزوال (السعودية)</option>
+              {SAcities ? (SAcities.map((city, index) => {
+                return(<option value={city} key={index}>{city}</option>)
+              })) : null}
+            </select>
+          </div>
+        </div>
+
+        <div className="form-inline mt-4">
+          <label htmlFor="date" className="ml-sm-4"/>
+          <div className="input-group">
+            <input required onChange={handleChange} type="text" onFocus={(e) => {e.target.type='date'}} value={state.date ? state.date : ''} id="date" min={currentDate} max={weekLater} placeholder="التاريخ" className={"form-control " + (error['date'] ? 'is-invalid': '')}/>
+          </div>
+
+          <label htmlFor="day" className="ml-sm-4"/>
+          <div className="input-group pt-special">
+            <input readOnly type="text" id="day" value={day || '* اليوم'}  className="form-control"/>
+          </div>
+        </div>
+
+        <div className="form-inline mt-4">
+          
+          <label htmlFor="notes" className="ml-sm-4"/>
+          <div className="input-group">
+            <textarea type="text" onChange={handleChange} value={state.notes ? state.notes : ''} id="notes" cols="66" placeholder="ملاحظات..." className={"form-control " + (error['notes'] ? 'is-invalid': '')}/>
+          </div>
+
+        </div>
+
+        {PassengersInfo}
+
+        <p className="font-weight-bold text-info mt-2"> سيتم طلب إثبات الهوية عند الصعود إلى الباص, الرجاء إحضار وثيقة الإثبات (بطاقة الهوية/جواز السفر/أو غيرها)</p>
+
+      
+      </div>
+    )
+
+    const SAYE = (
+      <div>
+        
+        {CustomerInfo}
+
+        <div className="form-inline mt-4">
+
+          <label htmlFor="from" className="ml-sm-4"/>
+          <div className="input-group">
+            <select required onChange={handleChange} id="from" className={"custom-select " + (error['from'] ? 'is-invalid': '')}>
+              <option value="" defaultValue>* مدينة الصعود (السعودية)</option>
+              {SAcities ? (SAcities.map((city, index) => {
+                return(<option value={city} key={index}>{city}</option>)
+              })) : null}
+            </select>
+          </div>
+
+          <label htmlFor="to" className="ml-sm-4"/>
+          <div className="input-group pt-special">
+            <select required onChange={handleChange} id="to" className={"custom-select " + (error['to'] ? 'is-invalid': '')}>
+              <option value="" defaultValue>* مدينة النزوال (اليمن)</option>
+              {YEcities ? (YEcities.map((city, index) => {
+                return(<option value={city} key={index}>{city}</option>)
+              })) : null}
+            </select>
+          </div>
+        </div>
+        
+        <div className="form-inline mt-4">
+          <label htmlFor="date" className="ml-sm-4"/>
+          <div className="input-group">
+            <input required onChange={handleChange} type="text" onFocus={(e) => {e.target.type='date'}} value={state.date ? state.date : ''} id="date" min={currentDate} max={weekLater} placeholder="التاريخ" className={"form-control " + (error['date'] ? 'is-invalid': '')}/>
+          </div>
+
+          <label htmlFor="day" className="ml-sm-4"/>
+          <div className="input-group pt-special">
+            <input readOnly type="text" id="day" value={day || '* اليوم'}  className="form-control"/>
+          </div>
+        </div>
+
+        <div className="form-inline mt-4">
+          
+          <label htmlFor="notes" className="ml-sm-4"/>
+          <div className="input-group">
+            <textarea type="text" onChange={handleChange} value={state.notes ? state.notes : ''} id="notes" cols="66" placeholder="ملاحظات..." className={"form-control " + (error['notes'] ? 'is-invalid': '')}/>
+          </div>
+
+        </div>
+
+        {PassengersInfo}
+
+        <p className="font-weight-bold text-info mt-2"> سيتم طلب إثبات الهوية عند الصعود إلى الباص, الرجاء إحضار وثيقة الإثبات (بطاقة الهوية/جواز السفر/أو غيرها)</p>
+
+      </div>
+    )
+
+    const YEYE = (
+      <div>
+
+        {CustomerInfo}
+
+        <div className="form-inline mt-4">
+          <label htmlFor="from" className="ml-sm-4"/>
+          <div className="input-group">
+            <select required onChange={handleChange} id="from" className={"custom-select " + (error['from'] ? 'is-invalid': '')}>
+              <option value="" defaultValue>* مدينة الصعود (اليمن)</option>
+              {YEcities ? (YEcities.map((city, index) => {
+                return(<option value={city} key={index}>{city}</option>)
+              })) : null}
+            </select>
+          </div>
+
+          <label htmlFor="to" className="ml-sm-4"/>
+          <div className="input-group pt-special">
+            <select required onChange={handleChange} id="to" className={"custom-select " + (error['to'] ? 'is-invalid': '')}>
+              <option value="" defaultValue>* مدينة النزوال (اليمن)</option>
+              {YEcities ? (YEcities.map((city, index) => {
+                return(<option value={city} key={index}>{city}</option>)
+              })) : null}
+            </select>
+          </div>
+        </div>
+
+        <div className="form-inline mt-4">
+          <label htmlFor="date" className="ml-sm-4"/>
+          <div className="input-group">
+            <input required onChange={handleChange} type="text" onFocus={(e) => {e.target.type='date'}} value={state.date ? state.date : ''} id="date" min={currentDate} max={weekLater} placeholder="التاريخ" className={"form-control " + (error['date'] ? 'is-invalid': '')}/>
+          </div>
+
+          <label htmlFor="day" className="ml-sm-4"/>
+          <div className="input-group pt-special">
+            <input readOnly type="text" id="day" value={day || '* اليوم'}  className="form-control"/>
+          </div>
+        </div>
+
+        <div className="form-inline mt-4">
+          
+          <label htmlFor="notes" className="ml-sm-4"/>
+          <div className="input-group">
+            <textarea type="text" onChange={handleChange} value={state.notes ? state.notes : ''} id="notes" cols="66" placeholder="ملاحظات..." className={"form-control " + (error['notes'] ? 'is-invalid': '')}/>
+          </div>
+
+        </div>
+        
+        {PassengersInfo}
+
+        <p className="font-weight-bold text-info mt-2"> سيتم طلب إثبات الهوية عند الصعود إلى الباص, الرجاء إحضار وثيقة الإثبات (بطاقة الهوية/جواز السفر/أو غيرها)</p>
+      </div>
+    )
+
+    if (state.type === "YESA"){return YESA}
+    if (state.type === "SAYE"){return SAYE}
+    if (state.type === "YEYE"){return YEYE}
+  }
+
+  const SubmitAndLeave = (
+    <div className="mt-4">
+      <div className="input-group justify-content-center mt-4">
+        <button type="submit" id="SubmissionBtn" className="btn btn-lg btn-outline-success">إرسال الطلب</button>
+      </div>
+      <p id="waitingText" className="text-info font-weight-bold d-none">
+        يتم معالجة الطلب, الرجاء الإنتظار...
+      </p>
+    </div>
+  )
+
+  const formPage = (
+    <div>
+      <legend className="display-6 text-primary">حجز تذكرة</legend>
+
+      <div name="SomeDiv" className="row">
+        
+        <div className="form-group col mt-5">
+          <p className="font-weight-lighter font-info text-right text-muted">الحقول المطلوبة مسبوقة بعلامة <strong>*</strong></p>
+          <p className="font-weight-lighter font-info text-right text-muted">يجب إضافة رقم هاتف واحد على الأقل</p>
+
+          <div className="form-inline">
+            <label htmlFor="type" className="ml-sm-4"/>
+            <div className="input-group">
+              <select onChange={handleType} value={state.type ? state.type : ''} required id="type" className="custom-select font-weight-bold">
+                <option className="font-weight-bold" value="" defaultValue>* إتجاه الرحلة</option>
+                <option className="font-weight-bold" value="SAYE">من السعودية إلى اليمن</option>
+                <option className="font-weight-bold" value="YESA">من اليمن إلى السعودية</option>
+                <option className="font-weight-bold" value="YEYE">بين المدن اليمنية</option>
+              </select>
+            </div>
+          </div>
+          
+          <form name="TripForm" onSubmit={handleSubmit}>
+            {state.type && state.type !== 'YEYE' ? (
+              <div className="form-group text-right mt-3">
+                <span className="font-weight-bold">* إختر شركات النقل (4 كحد أقصى)</span>
+                <fieldset className={"companies checkbox-list mr-md-4 mt-2 " + (error['companies'] ? 'border border-danger' : '')}>
+                  {Companies ? (Companies.map((company, index) => {
+                    return(
+                      <div className="form-check" key={index}>
+                        <input type="checkbox" id={index} value={company} name="companies[]" onClick={handleChange} className="form-check-input mr-1"/>
+                        <label htmlFor={`company${index}`} className="form-check-label mr-4">{company}</label>
+                      </div> 
+                    )
+                  })) : null}
+                </fieldset>
+              </div>
+            ) : state.type && state.type === 'YEYE' ? (
+              <div className="form-group text-right mt-3">
+                <span className="font-weight-bold">* إختر شركات النقل (4 كحد أقصى)</span>
+                <fieldset className={"companies checkbox-list mr-md-4 mt-2 " + (error['companies'] ? 'border border-danger' : '')}>
+                  {YECompanies ? (YECompanies.map((company, index) => {
+                    return(
+                      <div className="form-check" key={index}>
+                        <input type="checkbox" id={index} value={company} name="companies[]" onClick={handleChange} className="form-check-input mr-1"/>
+                        <label htmlFor={`company${index}`} className="form-check-label mr-4">{company}</label>
+                      </div> 
+                    )
+                  })) : null}
+                </fieldset>
+              </div>
+            ) : null}
+
+            {TripForm()}
+
+            {state.type ? SubmitAndLeave : null}
+          </form>
+        
+        </div>
+
+      </div>
+    </div>
+  )
+  const loadErrors = () => {
+    if (Object.keys(error).length !== 0 && error.constructor === Object){
+      return (
+        <div className="alert alert-info text-right mt-4">
+          {error ? Object.entries(error).map((e, id) => {
+            return (
+              <p key={id}>
+                {e[1].name} : {e[1].error}
+              </p>
+            )
+          }): null}
+        </div>
+      )
+    }
+  }
+
+  if (complete.completed) {
+    return <Redirect to={`/orders/${complete.order}`}/>
+  }
+
+  return (
+    <div className="mb-5 pb-5">
+      
+      <div className="carousel-item active" style={{backgroundImage: `url(${homeImg})`, opacity: 0.82}}>
+        <div className="text-info carousel-caption flex-center">
+          <h3 className="display-5">طلب حجز رحلة</h3>
+        </div>
+      </div>
+
+      <div className="container text-center mt-4">
+        <span className="display-6">أقسام الطلبات</span>
+        <hr/>
+        <p className="lead font-weight-bold">
+          <Link className="text-primary" to="/"> جميع الرحلات </Link>|
+          <Link className="text-primary" to="/orders"> طلباتي </Link>|
+          <Link className="text-primary" to="/delivery/order"> طلب إرسال رسالة أو طرد </Link>|
+          <Link className="text-primary" to="/transactions/order"> طلب تخليص معاملة </Link>
+        </p>
+        <p className="lead text-info font-weight-bold mt-4"><i className="fa fa-star-of-life fa-xs"/>الرجاء الإطلاع على <Link to="/policies" className="text-danger">السياسات والشروط</Link> قبل إجراء أي طلب.</p>
+      </div>
+    
+      <div className="container text-center mt-5">
+        <div className="card p-3 bg-grey shadow">
+          <span className="card-title display-6">طلب حجز تذكرة رحلة</span>
+          <hr/>
+          <div className="card-body">
+						{formPage}
+            {/* {state.type ? DocumentInfo : null} */}
+            {loadErrors()}
+          </div>
+        </div>
+      </div>
+    
+    </div>
+  )
+}
+
+
+/*
+  Required Inputs (From Users) :
+  
+    Companies [4 maximum]
+    Name (1 Traveler)
+    Phone_SA or Phone_YE
+    From (city of departure)
+    To (city of arrival)
+    Date (date of departure)
+    tickets (number of tickets)
+    babies (number of babies)
+    kids (number of kids (under 12))
+    elders (number of elders)
+*/
+
+/*
+
+  Un-Required Inputs (From Users) : 
+
+    Phone_SA or Phone_YE
+    Notes
+    ID_Number
+    ID_Image
+*/
+
+
+/*
+
+<div className="mt-4">
+          <p className="font-weight-light text-right text-info mr-md-4">* تذاكر الرضع مجانية دون إحتساب مقعد لهم, وخصم يصل إلى 50% لتذاكر الأطفال دون 12 سنة </p>
+          
+          <div className="form-inline">
+            <label htmlFor="num_tickets" className="ml-sm-4"/>
+            <div className="input-group">
+              <input required onChange={handleChange} type="number" value={state.num_tickets ? state.num_tickets : ''} id="num_tickets" placeholder="* عدد التذاكر" min="0" className={"form-control " + (error['tickets'] ? 'is-invalid': '')}/>
+            </div>
+
+            <label htmlFor="num_elders" className="ml-sm-4"/>
+            <div className="input-group pt-special">
+              <input onChange={handleChange} type="number" value={state.num_elders ? state.num_elders : ''} id="num_elders" placeholder="* عدد البالغين" min="0" className={"form-control " + (error['tickets'] ? 'is-invalid': '')}/>
+            </div>
+          </div>
+        </div>
+
+        <div className="form-inline mt-4">
+          <label htmlFor="num_kids" className="ml-sm-4"/>
+          <div className="input-group">
+            <input onChange={handleChange} type="number" value={state.num_kids ? state.num_kids : ''} id="num_kids" placeholder="* عدد الأطفال (دون 12 سنة)" min="0" className={"form-control " + (error['tickets'] ? 'is-invalid': '')}/>
+          </div>
+
+          <label htmlFor="num_babies" className="ml-sm-4"/>
+          <div className="input-group pt-special">
+            <input onChange={handleChange} type="number" value={state.num_babies ? state.num_babies : ''} id="num_babies" placeholder="* عدد الرضع" min="0" className={"form-control " + (error['tickets'] ? 'is-invalid': '')}/>
+          </div>
+        </div>
+        
+
+*/ 
+
+// const DocumentInfo = (
+  //   <form form="imageForm" onSubmit={handleImageUpload} encType="multipart/form-data" className="mt-4">
+  //     <p className="font-weight-light text-right mr-md-4">حقول إختيارية...</p>
+      
+  //     <div className="form-inline">
+  //       <label htmlFor="document_id" className="ml-sm-4"/>
+  //       <div className="input-group">
+  //         <input onChange={handleChange} type="text" value={state.document_id ? state.document_id : ''} id="document_id" placeholder="رقم (الجواز/الهوية/الإقامة)" className={'form-control ml-sm-4 ' + (error['document_id'] ? 'is-invalid': '')}/>
+  //       </div>
+  //     </div>
+
+  //     <div className="form-inline mt-4">
+  //       <label htmlFor="image" className="ml-sm-4 "/>
+  //       <div className="input-group pt-special">
+  //         <input onChange={handleImageSelect} type="file" name="image" id="image" className={"file-custom " + (error['document_img'] ? 'is-invalid': '')} placeholder="إختر صورة الجواز" accept="image/*"/>
+  //       </div>
+  //       {upBtn === 'btn' ? (
+  //         <input type="submit" value="رفع الصورة" className="btn btn-md btn-primary"/>
+  //       ) : upBtn === 'progBar' ? (
+  //         <div className="spinner-border text-info" role="status">
+  //           <span className="sr-only">قيد الرفع...</span>
+  //         </div>
+  //       ) : (
+  //         <span className="font-weight-bold text-success">تم رفع الصورة بنجاح.</span>
+  //       )}
+  //     </div>
+
+  //     <div className="container text-right mt-4">
+  //       <img id="image_preview" src={preview_img} width="128" alt="preview" className="img-fluid img-thumbnail mr-md-2"/>
+  //     </div>
+
+  //   </form>
+  // )
+
+  // const PassengersInfo = () => {
+
+  //   const handlePassengerChange = (e) => {
+  //     e.preventDefault();
+
+  //     // Get keys => Namespace & ID
+  //     var keys = e.target.id.split('-')
+  //     let namespace = keys[0]
+  //     let id = keys[1]
+
+  //     //  Keeping The State & Adding Info
+  //     let CurState = {...state}
+  //     let CurPasInfo = [...CurState.passengers]
+
+  //     let TargetPass = {...CurPasInfo[id], [namespace]: e.target.value}
+
+  //     CurPasInfo[id] = TargetPass
+
+  //     setState({
+  //       ...state,
+  //       passengers: CurPasInfo
+  //     });
+  //   }
+
+  //   return(
+  //     <div className="mt-4 text-right">
+  //       <span className="font-weight-bold text-muted mr-md-4">معلومات الركاب (إختياري)</span>
+        
+  //       {state.num_tickets > 0 ? [...Array(parseInt(state.num_tickets))].map((_, index) => (
+  //         <div key={index} className="form-inline mt-4">
+  //           <label htmlFor={`name-${index}`} className="ml-sm-4"/>
+  //           <div className="input-group">
+  //             <input onChange={handlePassengerChange} id={`name-${index}`} type="text" placeholder={`إسم الراكب ${index+1}`} className="form-control"/>
+  //           </div>
+
+  //           <label htmlFor={`gender-${index}`} className="ml-sm-4"/>
+  //           <div className="input-group">
+  //             <select onChange={handlePassengerChange} id={`gender-${index}`} className="custom-select font-weight-bold">
+  //               <option value="" defaultValue>جنس الراكب {index+1}</option>
+  //               <option value="ذكر" className="">ذكر</option>
+  //               <option value="أنثى" className="">أنثى</option>
+  //             </select>
+  //           </div>
+
+  //           <label htmlFor={`documentID-${index}`} className="ml-sm-4"/>
+  //           <div className="input-group">
+  //             <input onChange={handlePassengerChange} id={`documentID-${index}`} type="text" placeholder={`رقم هوية الراكب ${index+1}`} className="form-control"/>
+  //           </div>
+  //         </div>
+
+  //       )) : null}
+
+  //     </div>
+  //   )
+  // }
+  // const handleImageSelect = (e) => {
+  //   let fileToUpload = e.target.files
+  //   if (e.target.value){
+  //     setState({
+  //       ...state,
+  //       document_img: e.target.value
+  //     })
+  //     // Clear Related Errors
+  //     let errors = error
+  //     delete errors["AWSS3"]
+  //     setError(errors)
+  //     document.getElementById('image_preview').src = URL.createObjectURL(fileToUpload[0])
+  //   }
+    
+  // }
+
+  // const handleImageUpload = (e) => {
+  //   e.preventDefault();
+  //   const formData = new FormData(e.target)
+
+  //   const UploadImage = async() => {
+  //     await fetch('/api/image/upload', {
+  //       method: 'POST',
+  //       body: formData
+  //     }).then(resp => {
+  //       resp.json().then(data => {
+  //         if (resp.ok){
+  //           setUpBtn('compl')
+  //           setState({
+  //             ...state,
+  //             document_img: data.key,
+  //           });
+  //         } else {
+  //           setError({
+  //             AWSS3: {
+  //               name: 'خطأ',
+  //               error: 'حدث خطأ أثناء رفع الصورة, الرجاء المحاولة من جديد.',
+  //               type: 'warning'
+  //             }
+  //           });
+  //           setUpBtn('btn')
+  //         }
+  //       })
+  //     })
+  //   }
+
+  //   // Clear Related Errors
+  //   let errors = error
+  //   delete errors["AWSS3"]
+  //   setError(errors)
+
+  //   setUpBtn('progBar')
+  //   UploadImage();
+    
+  // }
+
+
